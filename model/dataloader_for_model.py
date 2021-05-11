@@ -1,12 +1,11 @@
 import torch
 from torchtext import data
 import pandas as pd
-
-from Konlpy.tag import Komoran 
+from konlpy.tag import Komoran 
 
 komoran = Komoran()
 
-class dataloader(Object):
+class dataloader(object):
     def __init__(self, path, batch_size = 64, test_ratio = .2, max_vocab = 99999, min_freq = 8, device = -1, use_eos = False, shuffle = True):
         super(dataloader, self).__init__()
 
@@ -23,7 +22,7 @@ class dataloader(Object):
         )
 
         train, test = data.TabularDataset(
-            path = '', # your data path
+            path = path, # your data path
             format = 'csv',
             fields = [
                 ('text' , self.text),
