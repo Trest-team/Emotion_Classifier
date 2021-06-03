@@ -11,10 +11,8 @@ class cnn_model(nn.Module):
 
         embedding = nn.Embedding(vocab_size, embedding_size)
         linear_1 = nn.Linear(seq_len_size, 256)
-        conv1_1 = nn.Conv1d(256, 128)
-        pool1_1 = nn.MaxPool1d(2, stride=1)
-        conv1_2 = nn.Conv1d(64, 32)
-        pool1_2 = nn.MaxPool1d(2, stride = 1)
+        conv1_1 = nn.Conv1d(256, 128, kernel = 2)
+        pool1_1 = nn.MaxPool1d(2, stride = 1)
 
         self.conv_operate = nn.Sequential(
             embedding,
@@ -22,14 +20,10 @@ class cnn_model(nn.Module):
             nn.Dropout(0.2),
             conv1_1,
             nn.ReLU(inplace=True),
-            pool1_1,
-            nn.Dropout(0.4),
-            conv1_2,
-            nn.ReLU(inplace=True),
-            pool1_2
+            pool1_1
         )
 
-        fc_1 = nn.Linear(16, 64) # 1d Conv는 결과가 어떻게 나올지 모르겠음
+        fc_1 = nn.Linear(128, 64) 
         fc_2 = nn.Linear(64, 32)
         fc_3 = nn.Linear(32, 7)
 
