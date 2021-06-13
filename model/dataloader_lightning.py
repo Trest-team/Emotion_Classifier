@@ -77,18 +77,19 @@ class DataModule(pl.LightningDataModule):
         pass
 
     def setup(self, stage = None):
-        self.emotion_train = ChatDataSet(self.train_file_path, self.vocab_path, self.merges_file)
-        self.emotion_val = ChatDataSet(self.val_file_path, self.vocab_path, self.merges_file)
-        self.emotion_test = ChatDataSet(self.test_file_path, self.vocab_path, self.merges_file)
+        if stage == 'fit' or stage is None:
+            emotion_train = ChatDataSet()
+        if stage == 'test' or stage is None:
+            pass
     
     def train_dataloader(self):
-        emotion_train = DataLoader(self.emotion_train, batch_size = self.batch_size)
+        emotion_train = DataLoader(batch_size = self.batch_size)
         return emotion_train
     
     def val_dataloader(self):
-        emotion_val = DataLoader(self.emotion_val, batch_size = self.batch_size)
+        emotion_val = DataLoader(batch_size = self.batch_size)
         return emotion_val
 
     def test_dataloader(self):
-        emotion_test = DataLoader(self.emotion_test, batch_size = self.batch_size)
+        emotion_test = DataLoader(batch_size = self.batch_size)
         return emotion_test
