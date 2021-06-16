@@ -1,16 +1,17 @@
 import torch
 import torch.nn as nn
-import model.dataloader_for_model
+# import model.dataloader_for_model 
+import Emotion_Classifier.model.dataloader_lightning as DL
 from torch.nn import functional as F
 
 class cnn_model(nn.Module):
-    def __init__(self, embedding_size, seq_len_size, use_cuda):
+    def __init__(self, hparams):
         super(cnn_model(), self).__init__()
-        self.data_loader = model.dataloader_for_model(batch_size = 32)
-        vocab_size = len(self.data_loader.text) # 이건 어떻게 가져와야 하는지 모르겠음
+        # self.data_loader = DL(batch_size = 32)
+        # vocab_size = len(self.data_loader.text) # 이건 어떻게 가져와야 하는지 모르겠음
 
-        embedding = nn.Embedding(vocab_size, embedding_size)
-        linear_1 = nn.Linear(seq_len_size, 256)
+        embedding = nn.Embedding(hparams.vocab_size, hparams.embedding_size)
+        linear_1 = nn.Linear(hparams.embedding_size, 256)
         conv1_1 = nn.Conv1d(256, 128, kernel = 2)
         pool1_1 = nn.MaxPool1d(2, stride = 1)
 
@@ -37,7 +38,7 @@ class cnn_model(nn.Module):
             fc_3
         )
 
-        if use_cuda:
+        if hparams.use_cuda:
             self.conv_operate = self.conv_operate.cuda()
             self.fc_operate = self.fc_operate.cuda()
 
