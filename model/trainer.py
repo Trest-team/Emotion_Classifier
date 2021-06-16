@@ -4,7 +4,6 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import wandb
 from typing import List
 import numpy as np
-import torch
 import logging
 import pytorch_lightning as pl
 from copy import deepcopy
@@ -101,11 +100,6 @@ class ArgsBase():
                             type = int,
                             default = 5,
                             help = 'num_workers')
-
-        parser.add_argument('--checkpoint',
-                            type = str,
-                            default = None,
-                            help = 'pretrained model checkpoint')
 
         return parser
     
@@ -219,13 +213,14 @@ def main(hparams):
     dataloader = Data_L.DataModule(hparams)
     model = Base(hparams)
 
-    if hparams.checkpoint is not None:
+    if hparams.checkpoint_path is not None:
         trainer.fit(model, dataloader)
     else:
         trainer.test()
 
+    wandb.finish()
+
 if __name__ == 'main':
-    parser = argparse.ArgumentParser()
     parser = ArgsBase.add_level_specific_args(parser)
     parser = Base.add_model_specific_args(parser)
     args = parser.parse_args()
