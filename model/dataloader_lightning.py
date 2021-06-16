@@ -7,16 +7,17 @@ from transformers import BartTokenizer
 
 
 class ChatDataSet(Dataset):
-    def __init__(self, file_path, vocab_path, merge_file, max_seq_len = 128, bos_token = '<bos>', eos_token = '<eos>'):
+    # def __init__(self, file_path, vocab_path, merge_file, max_seq_len = 128, bos_token = '<bos>', eos_token = '<eos>'):
+    def __init__(self, hparams):
         super().__init__()
 
-        self.dataset = pd.read_csv(file_path)
-        self.file_path = file_path
-        self.vocab_path = vocab_path
-        self.merges_file = merge_file
-        self.max_seq_len = max_seq_len
-        self.bos_token = bos_token
-        self.eos_token = eos_token
+        self.dataset = pd.read_csv(hparams.file_path)
+        self.file_path = hparams.file_path
+        self.vocab_path = hparams.vocab_path
+        self.merges_file = hparams.merge_file
+        self.max_seq_len = hparams.max_seq_len
+        self.bos_token = hparams.bos_token
+        self.eos_token = hparams.eos_token
 
         self.tokenizer = BartTokenizer(
             vocab_file = self.vocab_path,
@@ -59,19 +60,20 @@ class ChatDataSet(Dataset):
         }
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, train_file, val_file, test_file, vocab_path, merge_file, batch_size = 64, max_seq_len = 128, num_workers = 5):
+    #def __init__(self, train_file, val_file, test_file, vocab_path, merge_file, batch_size = 64, max_seq_len = 128, num_workers = 5):
+    def __init__(self, hparams):
         super().__init__()
-        self.batch_size = batch_size
-        self.max_seq_len = max_seq_len
+        self.batch_size = hparams.batch_size
+        self.max_seq_len = hparams.max_seq_len
 
-        self.train_file_path = train_file
-        self.val_file_path = val_file
-        self.test_file_path = test_file
+        self.train_file_path = hparams.train_file
+        self.val_file_path = hparams.val_file
+        self.test_file_path = hparams.test_file
 
-        self.vocab_path = vocab_path
-        self.merges_file = merge_file
+        self.vocab_path = hparams.vocab_path
+        self.merges_file = hparams.merge_file
 
-        self.num_workers = num_workers
+        self.num_workers = hparams.num_workers
 
     def prepare_data(self):
         pass
@@ -83,13 +85,13 @@ class DataModule(pl.LightningDataModule):
             pass
     
     def train_dataloader(self):
-        emotion_train = DataLoader(batch_size = self.batch_size)
+        emotion_train = DataLoader(dataset = self.train_file_path, batch_size = self.batch_size)
         return emotion_train
     
     def val_dataloader(self):
-        emotion_val = DataLoader(batch_size = self.batch_size)
+        emotion_val = DataLoader(dataset = self.val_file_path, batch_size = self.batch_size)
         return emotion_val
 
     def test_dataloader(self):
-        emotion_test = DataLoader(batch_size = self.batch_size)
+        emotion_test = DataLoader(dataset = self.test_file_path, batch_size = self.batch_size)
         return emotion_test
