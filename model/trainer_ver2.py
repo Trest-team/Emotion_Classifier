@@ -111,7 +111,8 @@ class ArgsBase():
                             help = 'num_workers')
 
         return parser
-    
+
+# input data를 학습에 쓸 수 있게 처리해주는 부분(masking,...)
 class ChatDataSet(Dataset):
     def __init__(self, file_path, vocab_path, merge_file, max_seq_len = 128, bos_token = '<bos>', eos_token = '<eos>'):
     # def __init__(self, hparams):
@@ -136,24 +137,31 @@ class ChatDataSet(Dataset):
         return len(self.dataset)
 
     def make_input_id_mask(self, tokens, index):
+        # token들을 id로 변환
         input_id = self.tokenizer.convert_tokens_to_ids(tokens)
+        # id가 있는 부분들은 1로 처리해준다
         mask = [1] * len(input_id)
 
+        # max_seq_len이 될 때까지 mask에는 pad_token_id인 0을 붙여주고 input_id에는 pad_token_id를 붙여준다
         if len(input_id) < self.max_seq_len:
             while len(input_id) < self.max_seq_len:
                 input_id += [self.tokenizer.pad_token_id]
                 mask += [0]
-
+        # input_id의 길이가 max_seq_len보다 길 경우, max_seq_len에 맞춰 eos_token_id를 붙이고 input_id를 자른다
         else:
             input_id = input_id[: self.max_seq_len - 1] + [self.tokenizer.eos_token_id]
             mask = mask[: self.max_seq_len]
         return input_id, mask
 
     def __getitem__(self, index):
+        # 원하는 index의 data를 받아온다
         record = self.dataset.iloc[index]
+        # data(record)를 q와 l로 나눈다
         q, l = record['Q'], record['label']
 
+        # q를 tokenizer에 넣어 token화 시키고 앞에는 bos, 끝에는 eos token을 붙여 학습에 사용할 수 있는 데이터로 만든다.
         q_tokens = [self.bos_token] + self.tokenizer.tokenize(q) + [self.eos_token]
+        # l 또한 token화
         l_tokens = self.tokenizer.tokenize(l)
 
         input_id, masking = self.make_input_id_mask(q_tokens, index)
@@ -187,25 +195,29 @@ class DataModule(pl.LightningDataModule):
     def prepare_data(self):
         pass
 
+    # train_file, val_file, test_file들을 학습에 사용 가능한 형태로 수정
     def setup(self, stage = None):
         self.train_file = ChatDataSet(self.train_file_path, self.vocab_path, self.merges_file, self.max_seq_len)
         self.val_file = ChatDataSet(self.val_file_path, self.vocab_path, self.merges_file, self.max_seq_len)
         self.test_file = ChatDataSet(self.test_file_path, self.vocab_path, self.merges_file, self.max_seq_len)
     
+    # self.train_file을 사용하는 dataloader 선언
     def train_dataloader(self):
         emotion_train = DataLoader(dataset = self.train_file, batch_size = self.batch_size)
         return emotion_train
     
+    # self.val_file을 사용하는 dataloader 선언
     def val_dataloader(self):
         emotion_val = DataLoader(dataset = self.val_file, batch_size = self.batch_size)
         return emotion_val
 
+    # self.test_file을 사용하는 dataloader 선언
     def test_dataloader(self):
         emotion_test = DataLoader(dataset = self.test_file, batch_size = self.batch_size)
         return emotion_test
 
 class Base(pl.LightningModule):
-    # 추가적인 argument들을 불어온다
+    # 추가적인 argument들을 불러온다
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = argparse.ArgumentParser(parent_parser = [parent_parser], add_help = False)
@@ -218,7 +230,7 @@ class Base(pl.LightningModule):
 
         return parser
 
-     # optimizer을 선언
+    # optimizer을 선언
     def configure_optimizers(self):
         param_optimizer = list(self.model.named_parameters())
         # decay되지 않을 parameter들의 list 선언
