@@ -18,9 +18,9 @@ from pytorch_lightning import Trainer
 from torch.optim import lr_scheduler
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
 from transformers import BartTokenizer
-import Emotion_Classifier.model.dataloader_lightning as Data_L
-import Emotion_Classifier.model.utils as utils
-import Emotion_Classifier.model.cnn_classifier as cnn_c
+from ..model import dataloader_lightning as Data_L
+from ..model import utils 
+from ..model import cnn_classifier as cnn_c
 
 # parser 선언 및 checkpoint_path를 argument에 추가
 parser = argparse.ArgumentParser(descroption = "Trest's Emotion classifier")
@@ -79,21 +79,6 @@ class ArgsBase():
                             type = int,
                             default = 512,
                             help='embedding vector size')
-
-        parser.add_argument('--train_file',
-                            type = str,
-                            default = './',
-                            help = 'train_data file link')
-
-        parser.add_argument('--val_file',
-                            type = str,
-                            default = './',
-                            help = 'val_data file link')
-
-        parser.add_argument('--test_file',
-                            type = str,
-                            default = './',
-                            help = 'test_data file link')
 
         parser.add_argument('--use_cuda',
                             type = bool,
