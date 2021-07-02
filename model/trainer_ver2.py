@@ -23,7 +23,7 @@ from ..model import utils
 from ..model import cnn_classifier as cnn_c
 
 # parser 선언 및 checkpoint_path를 argument에 추가
-parser = argparse.ArgumentParser(descroption = "Trest's Emotion classifier")
+parser = argparse.ArgumentParser(description = "Trest's Emotion classifier")
 parser.add_argument('--checkpoint_path', type = str, help = 'checkpoint path')
 
 # logger 선언
