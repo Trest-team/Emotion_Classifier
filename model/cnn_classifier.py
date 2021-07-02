@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 # import model.dataloader_for_model 
-import Emotion_Classifier.model.dataloader_lightning as DL
+import model.dataloader_lightning as DL
 from torch.nn import functional as F
 
 class cnn_model(nn.Module):
