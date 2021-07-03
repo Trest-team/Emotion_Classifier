@@ -10,6 +10,7 @@ import logging
 from copy import deepcopy
 import torch.functional as F
 from torch.utils.data import DataLoader, Dataset
+import torch.nn as nn
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -18,9 +19,6 @@ from pytorch_lightning import Trainer
 from torch.optim import lr_scheduler
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
 from transformers import BartTokenizer
-from ..model import dataloader_lightning as Data_L
-from ..model import utils
-from ..model import cnn_classifier as cnn_c
 
 # parser 선언 및 checkpoint_path를 argument에 추가
 parser = argparse.ArgumentParser(description = "Trest's Emotion classifier")
@@ -244,13 +242,57 @@ class Base(pl.LightningModule):
 
         return [optimizer], [lr_scheduler]
 
+class cnn_model(nn.Module):
+    def __init__(self, hparams):
+        super(cnn_model(), self).__init__()
+        # self.data_loader = DL(batch_size = 32)
+        # vocab_size = len(self.data_loader.text) # 이건 어떻게 가져와야 하는지 모르겠음
+
+        embedding = nn.Embedding(hparams.vocab_size, hparams.embedding_size)
+        linear_1 = nn.Linear(hparams.embedding_size, 256)
+        conv1_1 = nn.Conv1d(256, 128, kernel = 2)
+        pool1_1 = nn.MaxPool1d(2, stride = 1)
+
+        self.conv_operate = nn.Sequential(
+            embedding,
+            linear_1,
+            nn.Dropout(0.2),
+            conv1_1,
+            nn.ReLU(inplace=True),
+            pool1_1
+        )
+
+        fc_1 = nn.Linear(128, 64) 
+        fc_2 = nn.Linear(64, 32)
+        fc_3 = nn.Linear(32, 7)
+
+        self.fc_operate = nn.Sequential(
+            fc_1,
+            nn.Dropout(0.2),
+            nn.ReLU(),
+            fc_2,
+            nn.Dropout(0.4),
+            nn.ReLU(),
+            fc_3
+        )
+
+        if hparams.use_cuda:
+            self.conv_operate = self.conv_operate.cuda()
+            self.fc_operate = self.fc_operate.cuda()
+
+    def forward(self, input):
+        conv_result = self.conv_operate(input)
+        fc_result = self.fc_operate(conv_result)
+
+        return F.softmax(fc_result)
+
 # 학습 base class
 class ChatClassification(pl.LightningModule):
     def __init__(self, hparams, **kwargs) -> None:
         super(ChatClassification, self).__init__()
         self.hparams = hparams
         # 학습 모델 선언
-        self.cnn_c = cnn_c(self.hparams)
+        self.cnn_c = cnn_model(self.hparams)
 
     # forward 함수 -> model 함수에 input을 보내 결과를 받아온다(softmax 결과)
     def forward(self, input):
