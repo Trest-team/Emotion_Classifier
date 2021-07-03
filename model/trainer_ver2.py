@@ -15,7 +15,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, LightningDataModule, LightningModule
 from torch.optim import lr_scheduler
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
 from transformers import BartTokenizer
@@ -156,7 +156,7 @@ class ChatDataSet(Dataset):
             'labels' : np.array(label, dtype = np.int_)
         }
 
-class DataModule(pl.LightningDataModule):
+class DataModule(LightningDataModule):
     #def __init__(self, train_file, val_file, test_file, vocab_path, merge_file, batch_size = 64, max_seq_len = 128, num_workers = 5):
     def __init__(self, hparams):
         super().__init__()
@@ -199,7 +199,7 @@ class DataModule(pl.LightningDataModule):
         emotion_test = DataLoader(dataset = self.test_file, batch_size = self.batch_size)
         return emotion_test
 
-class Base(pl.LightningModule):
+class Base(LightningModule):
     # 추가적인 argument들을 불러온다
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -287,7 +287,7 @@ class cnn_model(nn.Module):
         return F.softmax(fc_result)
 
 # 학습 base class
-class ChatClassification(pl.LightningModule):
+class ChatClassification(LightningModule):
     def __init__(self, hparams, **kwargs) -> None:
         super(ChatClassification, self).__init__()
         self.hparams = hparams
@@ -310,8 +310,9 @@ class ChatClassification(pl.LightningModule):
         logits = self(x)
         loss = self.cross_entropy_loss(logits, y)
 
-        logs = {'train_loss': loss}
-        return {'loss': loss, 'log': logs}
+        self.log('train_loss', loss)
+
+        return loss
 
     # validation step을 선언
     def validation_step(self, val_batch, batch_idx):
@@ -319,9 +320,9 @@ class ChatClassification(pl.LightningModule):
         logits = self(x)
 
         loss = self.cross_entropy_loss(logits, y)
-        logs = {'val_loss' : loss}
+        self.log('val_loss', loss)
 
-        return logs
+        return loss
 
     # test step을 선언
     def test_step(self, test_batch, batch_idx):
@@ -329,9 +330,9 @@ class ChatClassification(pl.LightningModule):
         logits = self(x)
 
         loss = self.cross_entropy_loss(logits, y)
-        logs = {'test_loss' : loss}
+        self.log('test_loss', loss)
 
-        return logs
+        return loss
 
 def main(hparams):
     model = ChatClassification(hparams)
@@ -370,7 +371,7 @@ def main(hparams):
     if hparams.checkpoint_path is not None:
         trainer.fit(model, dataloader)
     else:
-        trainer.test()
+        trainer.test(model, dataloader)
 
     wandb.finish()
 
