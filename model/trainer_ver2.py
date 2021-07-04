@@ -70,7 +70,7 @@ class ArgsBase():
         
         parser.add_argument('--batch_size',
                             type = int,
-                            default = 32,
+                            default = 24,
                             help = 'batch size')
 
         parser.add_argument('--embedding_size',
@@ -92,6 +92,10 @@ class ArgsBase():
                             type = int,
                             default = 5,
                             help = 'num_workers')
+
+        parser.add_argument('--lr', type = float, default = 5e-5, help = 'The initial learning rate')
+
+        parser.add_argument('--warmup_ratio', type = float, default = 0.1, help = 'warmup ratio')
 
         return parser
 
@@ -199,49 +203,6 @@ class DataModule(LightningDataModule):
         emotion_test = DataLoader(dataset = self.test_file, batch_size = self.batch_size)
         return emotion_test
 
-class Base(LightningModule):
-    # 추가적인 argument들을 불러온다
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = argparse.ArgumentParser(parent_parser = [parent_parser], add_help = False)
-
-        parser.add_argument('--batch-size', type = int, default = 16, help = 'batch size for trainng')
-
-        parser.add_argument('--lr', type = float, default = 5e-5, help = 'The initial learning rate')
-
-        parser.add_argument('--warmup_ratio', type = float, default = 0.1, help = 'warmup ratio')
-
-        return parser
-
-    # optimizer을 선언
-    def configure_optimizers(self):
-        param_optimizer = list(self.model.named_parameters())
-        # decay되지 않을 parameter들의 list 선언
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-
-        # no_decay되는 parameter들은 weight_decay를 0으로, 나머지 parameter들은 0.01로 선언
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay':0.01},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
-
-        # optimizer로 AdamW를 사용
-        optimizer = AdamW(optimizer_grouped_parameters, lr = self.hparams.lr, correct_bias=False)
-        
-        # num_workers 계산
-        num_workers = [self.hparams.gpus if self.hparams.gpus is not None else 1] * (self.hparams.num_nodes if self.hparams.num_node is not None else 1)
-        # train.dataloader의 dataset의 길이를 반환
-        # 구조가 애매...
-        data_len = len(self.train_dataloader().dataset)
-        logging.info(f'number of workers {num_workers}, data length {data_len}')
-        num_train_steps = int(data_len / (self.hparams.batch_size * num_workers))
-        logging.info(f'num_train_steps : {num_train_steps}')
-        num_warmup_steps = int(num_train_steps * self.hparams.warmup_ratio)
-        schedular = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps = num_warmup_steps, num_train_steps = num_train_steps)
-        lr_scheduler = {'schedular' : schedular, 'monitor' : 'loss', 'interval' : 'step', 'frequency' : 1}
-
-        return [optimizer], [lr_scheduler]
-
 class cnn_model(nn.Module):
     def __init__(self, hparams):
         super(cnn_model(), self).__init__()
@@ -334,6 +295,35 @@ class ChatClassification(LightningModule):
 
         return loss
 
+    # optimizer을 선언
+    def configure_optimizers(self):
+        param_optimizer = list(self.model.named_parameters())
+        # decay되지 않을 parameter들의 list 선언
+        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+
+        # no_decay되는 parameter들은 weight_decay를 0으로, 나머지 parameter들은 0.01로 선언
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay':0.01},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        ]
+
+        # optimizer로 AdamW를 사용
+        optimizer = AdamW(optimizer_grouped_parameters, lr = self.hparams.lr, correct_bias=False)
+        
+        # num_workers 계산
+        num_workers = [self.hparams.gpus if self.hparams.gpus is not None else 1] * (self.hparams.num_nodes if self.hparams.num_node is not None else 1)
+        # train.dataloader의 dataset의 길이를 반환
+        # 구조가 애매...
+        data_len = len(self.train_dataloader().dataset)
+        logging.info(f'number of workers {num_workers}, data length {data_len}')
+        num_train_steps = int(data_len / (self.hparams.batch_size * num_workers))
+        logging.info(f'num_train_steps : {num_train_steps}')
+        num_warmup_steps = int(num_train_steps * self.hparams.warmup_ratio)
+        schedular = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps = num_warmup_steps, num_train_steps = num_train_steps)
+        lr_scheduler = {'schedular' : schedular, 'monitor' : 'loss', 'interval' : 'step', 'frequency' : 1}
+
+        return [optimizer], [lr_scheduler]
+
 def main(hparams):
     model = ChatClassification(hparams)
 
@@ -377,7 +367,6 @@ def main(hparams):
 
 if __name__ == 'main':
     parser = ArgsBase.add_level_specific_args(parser)
-    parser = Base.add_model_specific_args(parser)
     args = parser.parse_args()
 
     # logger부분 학습하기
