@@ -40,17 +40,17 @@ class ArgsBase():
         )
         parser.add_argument('--train_file',
                             type = str,
-                            default = 'dataset/ChatbotData_shuf_train.csv',
+                            default = './dataset/ChatbotData_shuf_train.csv',
                             help = 'train_file')
 
         parser.add_argument('--val_file',
                             type = str,
-                            default = 'dataset/ChatbotData_shuf_valid.csv',
+                            default = './dataset/ChatbotData_shuf_valid.csv',
                             help = 'val_file')
 
         parser.add_argument('--test_file',
                             type = str,
-                            default = 'dataset/ChatbotData_shuf_test.csv',
+                            default = './dataset/ChatbotData_shuf_test.csv',
                             help = 'test_file')
 
         parser.add_argument('--max_vocab_size',
@@ -60,12 +60,12 @@ class ArgsBase():
 
         parser.add_argument('--vocab_path',
                             type = str,
-                            default = 'made_tokenizers/vocab.json',
+                            default = './made_tokenizers/vocab.json',
                             help = 'vocab_path')
 
         parser.add_argument('--merges_file',
                             type = str,
-                            default = 'made_tokenizers/merges.txt',
+                            default = './made_tokenizers/merges.txt',
                             help = 'merges_file')
         
         parser.add_argument('--batch_size',
@@ -328,7 +328,7 @@ def main(hparams):
     model = ChatClassification(hparams)
 
     checkpoint_callback = ModelCheckpoint(
-        filepath = os.path.join('Emotion_Classifier/model_checkpoint', '{epoch:d}'),
+        filepath = os.path.join('./model_checkpoint', '{epoch:d}'),
         verbose=True,
         save_last=True,
         save_top_k= 3,
@@ -352,7 +352,7 @@ def main(hparams):
 
     if hparams.checkpoint:
         # hparams에 checkpoint 추가
-        trainer_args['resume_from_checkpoint'] = os.path.join('Emotion_Classifier/model_checkpoint', hparams.checkpoint)
+        trainer_args['resume_from_checkpoint'] = os.path.join('./model_checkpoint', hparams.checkpoint)
 
     trainer = Trainer(**trainer_args)
 
@@ -367,6 +367,7 @@ def main(hparams):
 
 if __name__ == 'main':
     parser = ArgsBase.add_level_specific_args(parser)
+    parser = Trainer.add_argparse_args(parser)
     args = parser.parse_args()
 
     # logger부분 학습하기
